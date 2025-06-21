@@ -69,9 +69,17 @@ class JalenWidget(tk.Frame):
             self._log_message("[JALEN] SYSTEM ALERT ACTIVE")
 
     def _log_message(self, msg):
-        """Internal method to insert a message into the chat log."""
+        """Internal method to insert a message into the chat log.
+        Ensures GUI updates happen on the main thread."""
+        # Schedule the actual update on the main Tkinter thread
+        self.after(0, self._update_chat_display, msg)
+
+    def _update_chat_display(self, msg):
+        """Helper method to perform actual GUI update for chat display."""
+        self.chat_display.config(state='normal')
         self.chat_display.insert("end", f"{msg}\n")
         self.chat_display.see("end")
+        self.chat_display.config(state='disabled')
 
     def toggle_settings(self):
         """Show/hide the settings panel."""

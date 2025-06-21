@@ -15,6 +15,16 @@ class JalenAgent:
         self._input_thread = None
         self.text_gen = TextGeneration(model_path=model_path)
         self.gui_callback = gui_callback
+        self.core_profile = self._load_core_profile()
+
+    def _load_core_profile(self):
+        core_profile_path = os.path.join(os.path.dirname(__file__), '../core/core_profile.json')
+        try:
+            with open(core_profile_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[JalenAgent] Error loading core profile: {e}")
+            return {}
 
     def start_chatbox(self):
         if self._running:
@@ -87,21 +97,25 @@ class JalenAgent:
             if cmd_result:
                 return cmd_result
 
-        # Load Judy's core profile
-        core_profile_path = os.path.join(os.path.dirname(__file__), '../core/core_profile.json')
-        try:
-            with open(core_profile_path, 'r', encoding='utf-8') as f:
-                core_profile = json.load(f)
-        except Exception:
-            core_profile = {}
+        # Use cached Judy's core profile
+        core_profile = self.core_profile
         # Gather context
         mood = self.state_manager.get_mood() if hasattr(self.state_manager, 'get_mood') else "neutral"
         scene = self.state_manager.state.get("scene", "default")
-        # Optionally, fetch recent memories (stubbed here)
+
+        # Fetch recent memories from MemoryDaemon
         recent_memories = ""
-        if hasattr(self.state_manager, 'get_memories'):
-            memories = self.state_manager.get_memories(memory_type="short")
-            recent_memories = '\n'.join([m['text'] for m in memories[-5:]])
+        if self.memory_daemon and hasattr(self.memory_daemon, 'memory'):
+            # Access the memory list directly from memory_daemon
+            all_memories = self.memory_daemon.memory
+            # Get the last 5 entries that are dictionaries and have a 'text' key
+            valid_memories = [m['text'] for m in all_memories if isinstance(m, dict) and 'text' in m][-5:]
+            recent_memories = '\n'.join(valid_memories)
+            if not valid_memories:
+                print("[JalenAgent] No valid recent memories found in MemoryDaemon for prompt.")
+        else:
+            print("[JalenAgent] MemoryDaemon not available or has no memory attribute.")
+
         # Compose prompt
         prompt = prompt_template.format(
             judy_name=core_profile.get("name", "Judy"),

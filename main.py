@@ -70,12 +70,13 @@ def launch_test_gui(agent):
             chat_log.insert(tk.END, f'You: {user_input}\n')
             chat_log.config(state='disabled')
             input_box.delete(0, tk.END)
-            # Get response from agent (simulate chat)
-            response = agent.generate_response(user_input) if hasattr(agent, 'generate_response') else "[No response method]"
-            chat_log.config(state='normal')
-            chat_log.insert(tk.END, f'Judy: {response}\n')
-            chat_log.config(state='disabled')
-            chat_log.see(tk.END)
+            # Asynchronously get response from agent
+            if hasattr(agent, 'generate_response_async'):
+                # The callback (jalen_widget._log_message) will handle displaying the response
+                agent.generate_response_async(user_input, agent.gui_callback)
+            else:
+                # Fallback or error handling if method doesn't exist
+                jalen_widget._log_message("[Error] Agent does not support async response generation.")
 
     root = tk.Tk()
     root.title("Judy Test Chat")
