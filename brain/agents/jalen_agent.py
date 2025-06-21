@@ -8,12 +8,13 @@ from brain.core.text_generation import TextGeneration
 from brain.core.prompt_frame import prompt_template
 
 class JalenAgent:
-    def __init__(self, memory_daemon, state_manager, model_path=None):
+    def __init__(self, memory_daemon, state_manager, model_path=None, gui_callback=None):
         self.state_manager = state_manager
         self.memory_daemon = memory_daemon
         self._running = False
         self._input_thread = None
         self.text_gen = TextGeneration(model_path=model_path)
+        self.gui_callback = gui_callback
 
     def start_chatbox(self):
         if self._running:
@@ -42,7 +43,10 @@ class JalenAgent:
                     # Store Judy's response in both legacy and ChromaDB memory
                     self.memory_daemon.add_memory({"timestamp": datetime.datetime.now().isoformat(), "text": f"Judy: {response}"}, memory_type="short")
                     self.state_manager.add_memory_chroma(f"Judy: {response}", memory_type="short", metadata={"timestamp": time.time(), "role": "judy"})
-                    print(f"Judy🌹: {response}")
+                    if self.gui_callback:
+                        self.gui_callback(f"Judy🌹: {response}")
+                    else:
+                        print(f"Judy🌹: {response}")
 
                 self.generate_response_async(message, print_response)
                 # Wait for the response to print before accepting new input

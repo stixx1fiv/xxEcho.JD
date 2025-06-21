@@ -79,11 +79,18 @@ def launch_test_gui(agent):
 
     root = tk.Tk()
     root.title("Judy Test Chat")
-    root.geometry("400x300")
+    root.geometry("400x500")  # Increased height to accommodate JalenWidget
     root.resizable(False, False)
 
-    chat_log = scrolledtext.ScrolledText(root, state='disabled', wrap=tk.WORD, height=15)
-    chat_log.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+    # Create JalenWidget instance
+    from gui.components.jalen_widget import JalenWidget
+    jalen_widget = JalenWidget(root)
+    jalen_widget.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+    # Pass JalenWidget's _log_message as callback to agent
+    agent.gui_callback = jalen_widget._log_message
+
+    chat_log = jalen_widget.chat_display # Use JalenWidget's chat_display
 
     input_frame = tk.Frame(root)
     input_frame.pack(fill=tk.X, padx=10, pady=(0,10))
@@ -131,12 +138,14 @@ def main():
         daemons=daemons,
         interval=5
     )
-    pulse_coordinator.register_observer(status_bar.handle_pulse_update)
+    pulse_coordinator.register_observer(status_bar.handle_pulse_update) # Ensure status_bar is defined or imported correctly
     pulse_coordinator.start()
 
     # Fire up Judy's chat agent
+    # Agent is created first, then gui_callback is set in launch_test_gui
     agent = JalenAgent(memory_daemon, state_manager)
     # agent.start_chatbox()  # Disabled for test GUI
+
     gui_thread = threading.Thread(target=launch_test_gui, args=(agent,), daemon=True)
     gui_thread.start()
 
