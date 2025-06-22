@@ -207,6 +207,75 @@ class StateManager:
                 self.add_memory_chroma(mem["text"], memory_type="long", metadata=mem)
         print("[StateManager] Migrated long-term memories to ChromaDB.")
 
+    def migrate_long_term_memories_to_chroma(self):
+        # Example: migrate all long-term memories to ChromaDB
+        with self.lock:
+            long_term_memories_in_state = self.state.get("long_term_memory", [])
+            if not long_term_memories_in_state:
+                print("[StateManager] No long-term memories in state to migrate.")
+                return
+
+            print(f"[StateManager] Migrating {len(long_term_memories_in_state)} long-term memories to ChromaDB...")
+            migrated_count = 0
+            for mem in long_term_memories_in_state:
+                # Ensure mem is a dictionary and has 'text' and 'timestamp'
+                if isinstance(mem, dict) and "text" in mem and "timestamp" in mem:
+                    self.add_memory_chroma(mem["text"], memory_type="long", metadata=mem)
+                    migrated_count += 1
+                else:
+                    print(f"[StateManager] Skipping invalid memory object: {mem}")
+
+            if migrated_count > 0:
+                print(f"[StateManager] Successfully migrated {migrated_count} long-term memories to ChromaDB.")
+            else:
+                print("[StateManager] No valid long-term memories were migrated to ChromaDB.")
+            # Optionally, clear long_term_memory from state after migration
+            # self.state["long_term_memory"] = []
+            # self.save_state()
+
+
+    def fetch_recent_memories_in_memory(self, limit: int):
+        """
+        Prunes the short-term memory list in self.state to the given limit,
+        keeping the most recent memories.
+        """
+        with self.lock:
+            short_term_memories = self.state.get("short_term_memory", [])
+            if len(short_term_memories) > limit:
+                # Sort by timestamp, descending (newest first), then take the top 'limit'
+                # This assumes 'timestamp' is a sortable field (e.g., Unix timestamp)
+                sorted_memories = sorted(short_term_memories, key=lambda x: x.get("timestamp", 0), reverse=True)
+                self.state["short_term_memory"] = sorted_memories[:limit]
+                self._touch()
+                print(f"[StateManager] Pruned short-term memory from {len(short_term_memories)} to {len(self.state['short_term_memory'])} entries.")
+                self.save_state()
+
     def rebuild_prompt_context(self):
         # Placeholder for context rebuild logic
-        print("[StateManager] Rebuilt prompt context.")
+        # For now, let's simulate it by gathering some recent memories
+        # In a real scenario, this would involve more complex NLP and context assembly
+        with self.lock:
+            short_term_memories = self.get_memories("short")
+            long_term_memories_docs = self.long_mem_collection.peek(limit=5) # Peek from ChromaDB
+
+            context_parts = []
+            context_parts.append("Current Mood: " + self.state.get("mood", "neutral"))
+            context_parts.append("Current Scene: " + self.state.get("scene", "default"))
+
+            if short_term_memories:
+                context_parts.append("\nRecent Short-Term Memories:")
+                for mem in short_term_memories[-5:]: # Last 5 short-term
+                    context_parts.append(f"- {mem.get('text', '')}")
+
+            if long_term_memories_docs and long_term_memories_docs['documents']:
+                context_parts.append("\nRelevant Long-Term Memories (from ChromaDB):")
+                for doc in long_term_memories_docs['documents'][0][:3]: # First 3 from peek
+                     context_parts.append(f"- {doc}")
+
+            # Actual prompt context string would be assembled here
+            # For now, just print that it was rebuilt and what it might contain
+            print(f"[StateManager] Rebuilt prompt context. Contains {len(context_parts)} parts.")
+            # self.state["current_prompt_context"] = "\n".join(context_parts) # If we were storing it
+            self.clear_context_stale() # Mark as no longer stale
+            self._touch()
+        self.save_state() # Save state because clear_context_stale modified it

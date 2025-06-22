@@ -47,12 +47,26 @@ class PulseCoordinator:
         except Exception as e:
             print(f"[PulseCoordinator] Error in migrate_long_term_memories_to_chroma: {e}")
         try:
-            if self.state_manager.is_context_stale():
-                self.state_manager.rebuild_prompt_context()
-                self.state_manager.clear_context_stale()
+            # Clean and refresh short-term memory if over limit
+            # Ensure get_memories and fetch_recent_memories_in_memory are thread-safe (which they are via StateManager's lock)
+            recent_count = len(self.state_manager.get_memories("short"))
+            if recent_count > 50: # As per the original plan
+                print(f"[PulseCoordinator][Idle] Too many short-term memories ({recent_count}), pruning...")
+                self.state_manager.fetch_recent_memories_in_memory(limit=30) # As per the original plan
         except Exception as e:
-            print(f"[PulseCoordinator] Error in context staleness handling: {e}")
+            print(f"[PulseCoordinator][Idle] Error in short-term memory pruning: {e}")
 
+        try:
+            if self.state_manager.is_context_stale():
+                print("[PulseCoordinator][Idle] Context is stale, rebuilding...")
+                self.state_manager.rebuild_prompt_context()
+                # clear_context_stale is now called within rebuild_prompt_context in StateManager
+        except Exception as e:
+            print(f"[PulseCoordinator][Idle] Error in context staleness handling: {e}")
+
+    # _context_stale method is not strictly needed here anymore as StateManager handles it,
+    # but keeping it doesn't harm if it were used elsewhere in PulseCoordinator.
+    # For now, it's unused by _handle_idle_behavior's current logic.
     def _context_stale(self):
         return self.state_manager.is_context_stale()
 

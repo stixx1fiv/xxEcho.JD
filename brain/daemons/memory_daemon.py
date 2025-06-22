@@ -88,7 +88,8 @@ class MemoryDaemon:
     def run(self):
         print("[MemoryDaemon] MemoryDaemon started.") # MODIFIED
         while self.running:
-            self.check_memory_expiration()
+            # self.check_memory_expiration() # Commented out: Handled by PulseCoordinator's idle cycle via StateManager
+            print("[MemoryDaemon] Running... (memory expiration logic now handled by StateManager via PulseCoordinator)")
             # Wait for 10 seconds or until shutdown_event is set
             self.shutdown_event.wait(10) # NEW
 
@@ -118,11 +119,12 @@ class MemoryDaemon:
 
     def on_heartbeat(self):
         """Called by HeartbeatDaemon on each heartbeat. Sync new/expired memories to StateManager (ChromaDB)."""
-        print("[MemoryDaemon] Heartbeat received. Syncing to StateManager...")
+        print("[MemoryDaemon] Heartbeat received. Syncing to StateManager...") # MODIFIED: ChromaDB sync logic commented out
         # Example: Push all new/active memories to StateManager's ChromaDB
-        if hasattr(self, 'state_manager') and self.state_manager:
-            for item in self.memory:
-                # Only push if not already in ChromaDB (you may want a better check in production)
-                if isinstance(item, dict) and 'content' in item:
-                    self.state_manager.add_memory_chroma(item['content'], memory_type="short", metadata=item)
+        # if hasattr(self, 'state_manager') and self.state_manager:
+        #     for item in self.memory:
+        #         # Only push if not already in ChromaDB (you may want a better check in production)
+        #         if isinstance(item, dict) and 'content' in item:
+        #             self.state_manager.add_memory_chroma(item['content'], memory_type="short", metadata=item)
+        print("[MemoryDaemon] Note: ChromaDB sync from MemoryDaemon.on_heartbeat is now handled by StateManager's idle tasks.")
         # You can also pull relevant context from ChromaDB if needed

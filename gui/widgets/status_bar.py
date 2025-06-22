@@ -18,6 +18,11 @@ class StatusBar:
         daemons = self.last_pulse.get("daemons", {})
 
         print(f"[🩸 GUI PULSE] Mood: {mood} | Mode: {mode} | Scene: {scene} | Memories: {memory_count}")
+        if mode == "idle":
+            # Example: Could show last idle task or just a general idling message
+            # For now, a simple message. More specific messages would require PulseCoordinator to send more detailed status.
+            print("[🟢 GUI PULSE] Judy is idling. Background processes active.")
+
         for name, status in daemons.items():
             print(f"[👾] {name}: {status}")
 
