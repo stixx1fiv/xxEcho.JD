@@ -1,6 +1,6 @@
-<<<<<<< HEAD
 chromadb
-=======
 fastapi
 uvicorn
->>>>>>> aab08fcfd10f189d7917bbbcbb896b133f73513c
+rich
+llama-cpp-python
+watchdog
